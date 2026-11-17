@@ -1,3 +1,4 @@
+
 import socket
 import os
 import hashlib
@@ -8,6 +9,8 @@ import threading
 HOST = "0.0.0.0"
 PORT = 5000
 CHUNK_SIZE = 4096
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RECEIVED_DIR = os.path.join(BASE_DIR, "received_files")
 
 
 def receive_exact(conn, size):
@@ -66,6 +69,8 @@ def handle_client(conn, addr):
         info = json.loads(metadata.decode())
 
         filename = os.path.basename(info["filename"])
+        if filename in ("", ".", ".."):
+            raise ValueError("Invalid filename")
         filesize = int(info["filesize"])
         expected_checksum = info["checksum"]
 
@@ -75,7 +80,7 @@ def handle_client(conn, addr):
                     for c in expected_checksum.lower())):
             raise ValueError("Invalid file information")
 
-        filepath = os.path.join("received_files", filename)
+        filepath = os.path.join(RECEIVED_DIR, filename)
 
         partial_path = filepath + "." + expected_checksum + ".part"
 
@@ -156,7 +161,7 @@ def handle_client(conn, addr):
         print("Connection closed:", addr)
 
 
-os.makedirs("received_files", exist_ok=True)
+os.makedirs(RECEIVED_DIR, exist_ok=True)
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
